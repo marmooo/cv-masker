@@ -1,0 +1,31 @@
+{
+  "core": {
+    "whitelist": {
+      "": [
+        "add",
+        "addWeighted",
+        "bitwise_and",
+        "bitwise_not",
+        "bitwise_or",
+        "bitwise_xor",
+        "subtract"
+      ],
+      "Algorithm": []
+    }
+  },
+  "imgproc": {
+    "whitelist": {
+      "": ["cvtColor", "floodFill", "grabCut"]
+    }
+  },
+  "photo": {
+    "whitelist": {
+      "": [
+        "colorChange",
+        "illuminationChange",
+        "seamlessClone",
+        "textureFlattening"
+      ]
+    }
+  }
+}

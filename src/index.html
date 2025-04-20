@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head prefix="og: http://ogp.me/ns#">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="An image processing app that applies various seamless filters to a selected mask.">
+    <title>CV-Masker</title>
+    <meta property="og:title" content="CV-Masker">
+    <meta property="og:site_name" content="CV-Masker">
+    <meta property="og:description" content="An image processing app that applies various seamless filters to a selected mask.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://marmooo.github.io/cv-masker/">
+    <meta property="og:image" content="https://marmooo.github.io/cv-masker/favicon/apple-touch-icon.png">
+    <meta name="twitter:card" content="summary">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-F2179JXDYY"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-F2179JXDYY');
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/cv-masker/sw.js');
+        });
+      }
+    </script>
+    <link rel="icon" type="image/png" href="/cv-masker/favicon/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/cv-masker/favicon/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/cv-masker/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/cv-masker/favicon/site.webmanifest">
+    <link rel="alternate" href="https://marmooo.github.io/cv-masker/" hreflang="x-default">
+    <link rel="alternate" href="https://marmooo.github.io/cv-masker/ja/" hreflang="ja">
+    <link rel="alternate" href="https://marmooo.github.io/cv-masker/en/" hreflang="en">
+    <link class="drop-inline-css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link class="inline-css" href="https://cdn.jsdelivr.net/npm/image-compare-viewer@1.6.2/dist/image-compare-viewer.min.css" rel="stylesheet" crossorigin="anonymous">
+    <style>
+      :root {
+        --transparent-bg-light: none;
+        --transparent-bg-dark: none;
+      }
+      .transparent-bg {
+        background-image: var(--transparent-bg-light, none);
+      }
+      [data-bs-theme="dark"] .transparent-bg {
+        background-image: var(--transparent-bg-dark, none);
+      }
+      .loading { transition: filter 2s; filter: brightness(200%); }
+      .originalImage { top: 0; left: 0; opacity:.1; }
+      .paintCanvas { top: 0; left: 0; }
+      .paintPanel { display:flex; justify-content:center; align-items:center; height:96px; }
+      .palette { display:flex; justify-content:center; align-items:center; }
+      .front { width:64px; height:64px; background:white; color:black; }
+      .eraser { width:64px; height:64px; background:silver; }
+      .back { width:96px; height:96px; background:black; color:white; }
+      .panelContainer { display:flex; flex-direction:column; }
+      .canvasContainer { width:100%; height:calc(100vh - 110px); }
+      .toolbar { display:flex; flex-direction:row; justify-content:space-between; }
+      .center { display:flex; flex-direction:row; justify-content:center; align-items:center; }
+      @media (orientation: landscape) {
+        .panelContainer { flex-direction:row; }
+        .canvasContainer { width:calc(100% - 60px); height:calc(100vh - 90px); }
+        .toolbar { width:60px; flex-direction:column; }
+        .center { flex-direction:column; }
+      }
+      .filterLabel { width: 110px; }
+      .filterNav { position:absolute; left:0; top:0; }
+      html[data-bs-theme="dark"] .favicon { filter: invert(1) hue-rotate(180deg); }
+    </style>
+    <script data-ad-client="ca-pub-6459713332128733" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  </head>
+  <body>
+    <header>
+      <nav class="navbar navbar-expand">
+        <div class="container-xl flex-wrap">
+          <a class="navbar-brand" href="/cv-masker/">
+            <img class="favicon" alt="" src="/cv-masker/favicon/favicon.svg" width="32" height="32">
+            CV-Masker
+          </a>
+          <div class="navbar-nav">
+            <select title="lang" id="lang" class="form-select form-select-sm">
+              <option value="en" selected>English</option>
+              <option value="ja">日本語</option>
+            </select>
+            <button title="toggle dark-mode" id="toggleDarkMode" class="fs-4 btn p-0 ms-1" type="button">🌓</button>
+          </div>
+        </div>
+      </nav>
+    </header>
+    <main class="container-xxl">
+      <noscript>
+        <div class="alert alert-warning">Please enable JavaScript.</div>
+      </noscript>
+      <div id="loadPanel">
+        <h1 class="text-center">Apply seamless filters to images for free.</h1>
+        <div class="row">
+          <div class="col-md-7 pb-3">
+            <div class="image-compare rounded">
+              <img src="/cv-masker/img/before.webp" width="600" height="600" class="img-fluid w-100 rounded" alt="before" decoding="async">
+              <img src="/cv-masker/img/after.webp" width="600" height="600" class="transparent-bg img-fluid rounded d-none" alt="after" decoding="async">
+            </div>
+          </div>
+          <div class="col-md-5 d-flex flex-column-reverse">
+            <div class="alert alert-info">
+              <dl>
+                <dt class="fs-5">⚡️ Blazing fast</dt>
+                <dd>Processed with Wasm + SIMD + Threads.</dd>
+                <dt class="fs-5">🔒 Secure</dt>
+                <dd>No data is sent to the server.</dd>
+                <dt class="fs-5">🤖 No Learning</dt>
+                <dd>Your personal data is not learned.</dd>
+                <dt class="fs-5">⛔ Rights free</dt>
+                <dd>No AI, using a simple algorithm.</dd>
+              </dl>
+            </div>
+            <div class="alert alert-light shadow text-center">
+              <div>
+                <button class="selectImage btn btn-lg btn-primary rounded-pill">Select Image</button>
+                <input class="inputImage" type="file" accept="image/*" hidden>
+              </div>
+              or drop a file.
+              <div class="pt-3">No image? Try one of these:
+              </div>
+              <div class="examples">
+                <button class="btn p-0">
+                  <img class="rounded" src="/cv-masker/img/anime-64.webp" width="64" height="64" alt="an example of anime drawings" loading="lazy">
+                </button>
+                <button class="btn p-0">
+                  <img class="rounded" src="/cv-masker/img/car-64.webp" width="64" height="64" alt="an example of products" loading="lazy">
+                </button>
+                <button class="btn p-0">
+                  <img class="rounded" src="/cv-masker/img/cat-64.webp" width="64" height="64" alt="an example of animals" loading="lazy">
+                </button>
+                <button class="btn p-0">
+                  <img class="rounded" src="/cv-masker/img/castle-64.webp" width="64" height="64" alt="an example of buildings" loading="lazy">
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="filterPanel" class="panelContainer user-select-none d-none">
+        <div class="canvasContainer d-flex align-items-center justify-content-center bg-dark-subtle">
+          <div class="position-relative w-100 h-100">
+            <canvas class="image transparent-bg w-100 h-100 object-fit-contain"></canvas>
+            <canvas class="originalImage w-100 h-100 object-fit-contain position-absolute"></canvas>
+            <canvas class="paintCanvas position-absolute"></canvas>
+            <div class="filterNav bg-dark-subtle opacity-75 p-2">
+              <div class="paintPanel">
+                <button title="select the objects to delete" class="palette front border border-5 rounded-circle" type="button" data-bs-toggle="tooltip">
+                  <div>front</div>
+                </button>
+                <button title="clear selection" class="palette eraser border border-5 rounded-circle" type="button" data-bs-toggle="tooltip">
+                  <div>eraser</div>
+                </button>
+                <button title="select the objects to recover" class="palette back border border-5 rounded-circle" type="button" data-bs-toggle="tooltip">
+                  <div>back</div>
+                </button>
+              </div>
+              <div class="form-group d-flex align-items-center">
+                <div class="filterLabel col-form-label">Pen size</div>
+                <div class="d-flex w-100">
+                  <input type="range" class="penSize form-range" min="1" max="64" step="1" value="16" data-value="16">
+                  <button title="reset" class="btn p-0" type="button">↩️</button>
+                </div>
+              </div>
+              <div class="form-group d-flex align-items-center">
+                <div class="filterLabel col-form-label">Opacity</div>
+                <div class="d-flex w-100">
+                  <input type="range" class="opacity form-range" min="0" max="1" step="0.01" value="0.5" data-value="0.5">
+                  <button title="reset" class="btn p-0" type="button">↩️</button>
+                </div>
+              </div>
+              <hr>
+              <div class="form-group d-flex align-items-center">
+                <div class="filterLabel col-form-label">Filter</div>
+                <div class="d-flex w-100">
+                  <select class="filterSelect form-select form-selecct-sm">
+                    <option value="colorChange">color change</option>
+                    <option value="illuminationChange">illumination change</option>
+                    <option value="seamlessClone">seamless clone</option>
+                    <option value="textureFlattening">texture flattening</option>
+                    <option value="floodFill">flood fill</option>
+                  </select>
+                </div>
+              </div>
+              <div class="filters">
+                <div class="colorChange">
+                  <div class="form-group d-flex align-items-center">
+                    <div class="filterLabel col-form-label">R</div>
+                    <div class="d-flex w-100">
+                      <input type="range" class="R form-range" min="0.5" max="2.5" step="0.1" value="1" data-value="1">
+                      <button title="reset" class="btn p-0" type="button">↩️</button>
+                    </div>
+                  </div>
+                  <div class="form-group d-flex align-items-center">
+                    <div class="filterLabel col-form-label">G</div>
+                    <div class="d-flex w-100">
+                      <input type="range" class="G form-range" min="0.5" max="2.5" step="0.1" value="1" data-value="1">
+                      <button title="reset" class="btn p-0" type="button">↩️</button>
+                    </div>
+                  </div>
+                  <div class="form-group d-flex align-items-center">
+                    <div class="filterLabel col-form-label">B</div>
+                    <div class="d-flex w-100">
+                      <input type="range" class="B form-range" min="0.5" max="2.5" step="0.1" value="1" data-value="1">
+                      <button title="reset" class="btn p-0" type="button">↩️</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar text-center row align-items-center m-0">
+          <div class="col p-0 center">
+            <button title="move top" class="moveTop btn p-0" type="button" data-bs-toggle="tooltip">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M0 0h24v24H0z" fill="none"/><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="col p-0 center">
+            <button title="save to clipboard" class="saveClipboard btn p-0" type="button" data-bs-toggle="tooltip">
+              <!-- Material Design (Apache-2.0) https://github.com/Templarian/MaterialDesign -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19,3A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3H9.18C9.6,1.84 10.7,1 12,1C13.3,1 14.4,1.84 14.82,3H19M12,3A1,1 0 0,0 11,4A1,1 0 0,0 12,5A1,1 0 0,0 13,4A1,1 0 0,0 12,3M7,7V5H5V19H19V5H17V7H7M12,18L7,13H10V9H14V13H17L12,18Z"></path>
+              </svg>
+              <svg class="d-none" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M7,7H17V5H19V19H5V5H7V7M7.5,13.5L9,12L11,14L15.5,9.5L17,11L11,17L7.5,13.5Z"></path>
+              </svg>
+            </button>
+            <button title="download" class="download btn p-0" type="button" data-bs-toggle="tooltip">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M17 12v5H3v-5H1v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5z"/><path d="M10 15l5-6h-4V1H9v8H5l5 6z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="col p-0 center">
+            <button title="load from clipboard" class="loadClipboard btn p-0" type="button" data-bs-toggle="tooltip">
+              <!-- Material Design (Apache-2.0) https://github.com/Templarian/MaterialDesign -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,8L17,13H14V17H10V13H7L12,8M19,3A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3H9.18C9.6,1.84 10.7,1 12,1C13.3,1 14.4,1.84 14.82,3H19M12,3A1,1 0 0,0 11,4A1,1 0 0,0 12,5A1,1 0 0,0 13,4A1,1 0 0,0 12,3M7,7V5H5V19H19V5H17V7H7Z"></path>
+              </svg>
+            </button>
+            <button title="select image" class="selectImage btn p-0" type="button" data-bs-toggle="tooltip">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M17 12v5H3v-5H1v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5z"/><path d="M15 7l-5-6-5 6h4v8h2V7h4z"/>
+              </svg>
+            </button>
+            <input class="inputImage" type="file" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="pt-4 alert text-center">
+      <div>
+        <a class="px-1" href="/">Home</a>
+        <a class="px-1" href="/terms/">Terms</a>
+        <a class="px-1" href="https://github.com/marmooo/cv-masker">Contact</a>
+      </div>
+      <div class="text-muted">&copy; <a href="https://github.com/marmooo">marmooo</a></div>
+    </footer>
+    <div class="drop-inline-css
+      tooltip tooltip-arrow tooltip-inner bs-tooltip-auto fade show
+      bs-tooltip-top bs-tooltip-end bs-tooltip-bottom bs-tooltip-start
+      d-none">
+      <div data-popper-placement="left"></div>
+      <div data-popper-placement="top"></div>
+      <div data-popper-placement="right"></div>
+      <div data-popper-placement="bottom"></div>
+    </div>
+    <script src="/cv-masker/coi-serviceworker.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wasm-feature-detect@1.8.0/dist/umd/index.min.js"></script>
+    <script type="module" src="/cv-masker/index.js"></script>
+  </body>
+</html>
