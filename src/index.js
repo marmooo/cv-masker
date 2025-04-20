@@ -22,7 +22,7 @@ function initLangSelect() {
   const langSelect = document.getElementById("lang");
   langSelect.onchange = () => {
     const lang = langSelect.options[langSelect.selectedIndex].value;
-    location.href = `/grabcutter/${lang}/`;
+    location.href = `/cv-masker/${lang}/`;
   };
 }
 
@@ -45,13 +45,13 @@ async function getOpenCVPath() {
   const threadsSupport = self.crossOriginIsolated &&
     await wasmFeatureDetect.threads();
   if (simdSupport && threadsSupport) {
-    return "/grabcutter/opencv/threaded-simd/opencv_js.js";
+    return "/cv-masker/opencv/threaded-simd/opencv_js.js";
   } else if (simdSupport) {
-    return "/grabcutter/opencv/simd/opencv_js.js";
+    return "/cv-masker/opencv/simd/opencv_js.js";
   } else if (threadsSupport) {
-    return "/grabcutter/opencv/threads/opencv_js.js";
+    return "/cv-masker/opencv/threads/opencv_js.js";
   } else {
-    return "/grabcutter/opencv/wasm/opencv_js.js";
+    return "/cv-masker/opencv/wasm/opencv_js.js";
   }
 }
 
@@ -310,6 +310,9 @@ class FilterPanel extends LoadPanel {
       this.originalCanvas.style.opacity = event.target.value;
     };
 
+    this.filterSelect = panel.querySelector(".filterSelect");
+    this.filterSelect.onchange = () => this.filterSelectEvent();
+
     panel.querySelector(".moveTop").onclick = () => this.moveLoadPanel();
     panel.querySelector(".download").onclick = () => this.download();
     this.addFilters(panel);
@@ -407,10 +410,28 @@ class FilterPanel extends LoadPanel {
     }, "image/png");
   }
 
+  filterSelectEvent() {
+    const options = this.filterSelect.options;
+    const selectedIndex = options.selectedIndex;
+    const prevClass = options[this.selectedIndex].value;
+    const currClass = options[selectedIndex].value;
+    this.panel.querySelector(`.${prevClass}`).classList.add("d-none");
+    this.panel.querySelector(`.${currClass}`).classList.remove("d-none");
+    this.selectedIndex = selectedIndex;
+    const filter = this.filters[currClass];
+    this.currentFilter = filter;
+    this.canvas.classList.add("loading");
+    setTimeout(() => {
+      this.currentFilter.apply();
+      this.canvas.classList.remove("loading");
+    }, 0);
+  }
+
   addFilters(panel) {
     this.filtering = false;
     this.addGrabCutEvents(panel);
     this.addColorChangeEvents(panel);
+    this.addIlluminationChangeEvents(panel);
     this.currentFilter = this.filters.colorChange;
   }
 
@@ -547,6 +568,36 @@ class FilterPanel extends LoadPanel {
       const mask = this.filters.grabCut.nextMask;
       cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
       cv.colorChange(src, mask, src, R, G, B);
+      cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
+      cv.imshow(this.canvas, src);
+      src.delete();
+    }
+  }
+
+  addIlluminationChangeEvents(panel) {
+    const root = panel.querySelector(".illuminationChange");
+    this.filters.illuminationChange = {
+      root,
+      apply: () => this.illuminationChange(),
+      inputs: {
+        alpha: root.querySelector(".alpha"),
+        beta: root.querySelector(".beta"),
+      },
+    };
+    this.addInputEvents(this.filters.illuminationChange);
+  }
+
+  illuminationChange() {
+    const filter = this.filters.illuminationChange;
+    const alpha = Number(filter.inputs.alpha.value);
+    const beta = Number(filter.inputs.beta.value);
+    if (alpha < 0 || beta < 0) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const src = cv.imread(this.originalCanvas);
+      const mask = this.filters.grabCut.nextMask;
+      cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+      cv.colorChange(src, mask, src, alpha, beta);
       cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
       cv.imshow(this.canvas, src);
       src.delete();
