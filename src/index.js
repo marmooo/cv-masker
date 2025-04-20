@@ -432,6 +432,7 @@ class FilterPanel extends LoadPanel {
     this.addGrabCutEvents(panel);
     this.addColorChangeEvents(panel);
     this.addIlluminationChangeEvents(panel);
+    this.addTextureFlatteningEvents(panel);
     this.currentFilter = this.filters.colorChange;
   }
 
@@ -597,7 +598,41 @@ class FilterPanel extends LoadPanel {
       const src = cv.imread(this.originalCanvas);
       const mask = this.filters.grabCut.nextMask;
       cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-      cv.colorChange(src, mask, src, alpha, beta);
+      cv.illuminationChange(src, mask, src, alpha, beta);
+      cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
+      cv.imshow(this.canvas, src);
+      src.delete();
+    }
+  }
+
+  addTextureFlatteningEvents(panel) {
+    const root = panel.querySelector(".textureFlattening");
+    this.filters.textureFlattening = {
+      root,
+      apply: () => this.textureFlattening(),
+      inputs: {
+        low: root.querySelector(".low"),
+        high: root.querySelector(".high"),
+        kernelSize: root.querySelector(".kernelSize"),
+      },
+    };
+    this.addInputEvents(this.filters.textureFlattening);
+  }
+
+  textureFlattening() {
+    const filter = this.filters.textureFlattening;
+    const kernelSize = Number(filter.inputs.kernelSize.value) * 2 + 1;
+    if (kernelSize === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const low = Number(filter.inputs.low.value);
+      const high = Number(filter.inputs.high.value) + low;
+      const src = cv.imread(this.originalCanvas);
+      const mask = this.filters.grabCut.nextMask;
+      cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+      // TODO: buggy
+      // TODO: works only kernelSize = 3,5,7
+      cv.textureFlattening(src, mask, src, low, high, kernelSize);
       cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
       cv.imshow(this.canvas, src);
       src.delete();
