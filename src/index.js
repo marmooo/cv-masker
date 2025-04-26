@@ -433,6 +433,7 @@ class FilterPanel extends LoadPanel {
     this.addColorChangeEvents(panel);
     this.addIlluminationChangeEvents(panel);
     this.addTextureFlatteningEvents(panel);
+    this.addFillForegroundEvents(panel);
     this.currentFilter = this.filters.colorChange;
   }
 
@@ -441,7 +442,7 @@ class FilterPanel extends LoadPanel {
       input.addEventListener("input", () => {
         this.canvas.classList.add("loading");
         setTimeout(() => {
-          this.currentFilter.apply();
+          filter.apply();
           this.canvas.classList.remove("loading");
         }, 0);
       });
@@ -637,6 +638,40 @@ class FilterPanel extends LoadPanel {
       cv.imshow(this.canvas, src);
       src.delete();
     }
+  }
+
+  addFillForegroundEvents(panel) {
+    const root = panel.querySelector(".fillForeground");
+    this.filters.fillForeground = {
+      root,
+      apply: () => this.fillForeground(),
+      inputs: {
+        bgColor: root.querySelector(".bgColor"),
+        bgOpacity: root.querySelector(".bgOpacity"),
+      },
+    };
+    this.addInputEvents(this.filters.fillForeground);
+  }
+
+  fillForeground() {
+    const filter = this.filters.fillForeground;
+    const color = filter.inputs.bgColor.value;
+    const opacity = Number(filter.inputs.bgOpacity.value);
+    const w = this.originalCanvas.width;
+    const h = this.originalCanvas.height;
+    const imageData = this.originalCanvasContext.getImageData(0, 0, w, h);
+    const uint32Array = new Uint32Array(imageData.data.buffer);
+    const mask = this.filters.grabCut.nextMask;
+    const maskData = mask.data;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    const a = opacity;
+    const rgba = (a << 24) | (b << 16) | (g << 8) | r;
+    for (let i = 0; i < maskData.length; i++) {
+      if (maskData[i] !== 0) uint32Array[i] = rgba;
+    }
+    this.canvasContext.putImageData(imageData, 0, 0);
   }
 
   setCanvas(canvas) {

@@ -182,7 +182,7 @@
                     <option value="illuminationChange">illumination change</option>
                     <option value="seamlessClone">seamless clone</option>
                     <option value="textureFlattening">texture flattening</option>
-                    <option value="floodFill">flood fill</option>
+                    <option value="fillForeground">fill foreground</option>
                   </select>
                 </div>
               </div>
@@ -245,6 +245,21 @@
                     <div class="filterLabel col-form-label">kernel size</div>
                     <div class="d-flex w-100">
                       <input type="range" class="kernelSize form-range" min="0" max="4" step="1" value="1" data-value="1">
+                      <button title="reset" class="btn p-0" type="button">↩️</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="fillForeground d-none">
+                  <div class="form-group d-flex align-items-center">
+                    <div class="filterLabel col-form-label">Bg color</div>
+                    <div class="d-flex w-100">
+                      <input type="color" class="bgColor" value="#008080" data-value="#008080">
+                    </div>
+                  </div>
+                  <div class="form-group d-flex align-items-center">
+                    <div class="filterLabel col-form-label">Bg opacity</div>
+                    <div class="d-flex w-100">
+                      <input type="range" class="bgOpacity form-range" min="0" max="255" step="1" value="255" data-value="255">
                       <button title="reset" class="btn p-0" type="button">↩️</button>
                     </div>
                   </div>
