@@ -3,6 +3,7 @@
     "whitelist": {
       "": [
         "add",
+        "addWeighted",
         "merge",
         "multiply",
         "subtract",

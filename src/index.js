@@ -435,6 +435,7 @@ class FilterPanel extends LoadPanel {
     this.addTextureFlatteningEvents(panel);
     this.addFillForegroundEvents(panel);
     this.addMosaicEvents(panel);
+    this.addUnsharpMaskEvents(panel);
     this.currentFilter = this.filters.colorChange;
   }
 
@@ -708,12 +709,61 @@ class FilterPanel extends LoadPanel {
         cv.INTER_AREA,
       );
       cv.resize(effect, effect, new cv.Size(w, h), 0, 0, cv.INTER_NEAREST);
+
       const mask = this.filters.grabCut.nextMask;
       const blurredMask = this.getBlurredMask(mask, blurSize);
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  addUnsharpMaskEvents(panel) {
+    const root = panel.querySelector(".unsharpMask");
+    this.filters.unsharpMask = {
+      root,
+      apply: () => this.unsharpMask(),
+      inputs: {
+        ksize: root.querySelector(".ksize"),
+        strength: root.querySelector(".strength"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.unsharpMask);
+  }
+
+  unsharpMask() {
+    const filter = this.filters.unsharpMask;
+    const ksize = Number(filter.inputs.ksize.value);
+    if (ksize === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const strength = Number(filter.inputs.strength.value);
+      const blurSize = Number(filter.inputs.blur.value);
+      const src = cv.imread(this.originalCanvas);
+      const effect = new cv.Mat();
+      cv.boxFilter(
+        src,
+        effect,
+        -1,
+        new cv.Size(ksize, ksize),
+        new cv.Point(-1, -1),
+        true,
+        cv.BORDER_DEFAULT,
+      );
+      const alpha = 1 + strength;
+      const beta = -strength;
+      const gamma = 0;
+      cv.addWeighted(src, alpha, effect, beta, gamma, effect, -1);
+
+      const mask = this.filters.grabCut.nextMask;
+      const blurredMask = this.getBlurredMask(mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
       result.delete();
       blurredMask.delete();
     }
