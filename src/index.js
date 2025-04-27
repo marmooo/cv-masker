@@ -434,6 +434,7 @@ class FilterPanel extends LoadPanel {
     this.addIlluminationChangeEvents(panel);
     this.addTextureFlatteningEvents(panel);
     this.addFillForegroundEvents(panel);
+    this.addMosaicEvents(panel);
     this.currentFilter = this.filters.colorChange;
   }
 
@@ -672,6 +673,144 @@ class FilterPanel extends LoadPanel {
       if (maskData[i] !== 0) uint32Array[i] = rgba;
     }
     this.canvasContext.putImageData(imageData, 0, 0);
+  }
+
+  addMosaicEvents(panel) {
+    const root = panel.querySelector(".mosaic");
+    this.filters.mosaic = {
+      root,
+      apply: () => this.mosaic(),
+      inputs: {
+        dsize: root.querySelector(".dsize"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.mosaic);
+  }
+
+  mosaic() {
+    const filter = this.filters.mosaic;
+    const dsize = Number(filter.inputs.dsize.value);
+    if (dsize === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const blurSize = Number(filter.inputs.blur.value);
+      const src = cv.imread(this.originalCanvas);
+      const effect = new cv.Mat();
+      const w = src.cols;
+      const h = src.rows;
+      cv.resize(
+        src,
+        effect,
+        new cv.Size(w / dsize, h / dsize),
+        0,
+        0,
+        cv.INTER_AREA,
+      );
+      cv.resize(effect, effect, new cv.Size(w, h), 0, 0, cv.INTER_NEAREST);
+      const mask = this.filters.grabCut.nextMask;
+      const blurredMask = this.getBlurredMask(mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      effect.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  getBlurredMask(mask, blurSize) {
+    const blurredMask = new cv.Mat();
+    const size = new cv.Size(blurSize, blurSize);
+    cv.boxFilter(
+      mask,
+      blurredMask,
+      cv.CV_8U,
+      size,
+      new cv.Point(-1, -1),
+      true,
+      cv.BORDER_DEFAULT,
+    );
+    return blurredMask;
+  }
+
+  applySeamlessEffect(src, dst, mask) {
+    const maskColor = new cv.Mat();
+    {
+      const maskFloat = new cv.Mat();
+      mask.convertTo(maskFloat, cv.CV_32FC1, 1.0 / 255.0);
+      const maskVec = new cv.MatVector();
+      maskVec.push_back(maskFloat);
+      maskVec.push_back(maskFloat);
+      maskVec.push_back(maskFloat);
+      cv.merge(maskVec, maskColor);
+      maskFloat.delete();
+    }
+
+    const srcRGB = new cv.Mat();
+    const srcChannels = new cv.MatVector();
+    {
+      const srcFloat = new cv.Mat();
+      src.convertTo(srcFloat, cv.CV_32FC4, 1.0 / 255.0);
+      cv.split(srcFloat, srcChannels);
+      const srcRGBVec = new cv.MatVector();
+      srcRGBVec.push_back(srcChannels.get(0));
+      srcRGBVec.push_back(srcChannels.get(1));
+      srcRGBVec.push_back(srcChannels.get(2));
+      cv.merge(srcRGBVec, srcRGB);
+      srcFloat.delete();
+    }
+
+    const dstRGB = new cv.Mat();
+    {
+      const dstFloat = new cv.Mat();
+      dst.convertTo(dstFloat, cv.CV_32FC4, 1.0 / 255.0);
+      const dstChannels = new cv.MatVector();
+      cv.split(dstFloat, dstChannels);
+      const dstRGBVec = new cv.MatVector();
+      dstRGBVec.push_back(dstChannels.get(0));
+      dstRGBVec.push_back(dstChannels.get(1));
+      dstRGBVec.push_back(dstChannels.get(2));
+      cv.merge(dstRGBVec, dstRGB);
+      dstFloat.delete();
+      dstChannels.delete();
+    }
+
+    const resultRGB = new cv.Mat();
+    {
+      const partDst = new cv.Mat();
+      const partSrc = new cv.Mat();
+      cv.multiply(dstRGB, maskColor, partDst);
+      dstRGB.delete();
+      const invMaskColor = new cv.Mat();
+      const ones = new cv.Mat(
+        maskColor.rows,
+        maskColor.cols,
+        maskColor.type(),
+        new cv.Scalar(1.0, 1.0, 1.0),
+      );
+      cv.subtract(ones, maskColor, invMaskColor);
+      ones.delete();
+      maskColor.delete();
+      cv.multiply(srcRGB, invMaskColor, partSrc);
+      srcRGB.delete();
+      invMaskColor.delete();
+      cv.add(partDst, partSrc, resultRGB);
+      partDst.delete();
+      partSrc.delete();
+    }
+
+    const result = new cv.Mat();
+    {
+      const resultVec = new cv.MatVector();
+      resultVec.push_back(resultRGB);
+      resultVec.push_back(srcChannels.get(3)); // alpha
+      cv.merge(resultVec, result);
+      result.convertTo(result, cv.CV_8UC4, 255.0);
+      resultRGB.delete();
+      srcChannels.delete();
+    }
+    return result;
   }
 
   setCanvas(canvas) {

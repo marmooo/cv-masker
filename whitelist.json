@@ -3,19 +3,17 @@
     "whitelist": {
       "": [
         "add",
-        "addWeighted",
-        "bitwise_and",
-        "bitwise_not",
-        "bitwise_or",
-        "bitwise_xor",
-        "subtract"
+        "merge",
+        "multiply",
+        "subtract",
+        "split"
       ],
       "Algorithm": []
     }
   },
   "imgproc": {
     "whitelist": {
-      "": ["cvtColor", "floodFill", "grabCut"]
+      "": ["boxFilter", "cvtColor", "grabCut", "resize"]
     }
   },
   "photo": {
@@ -23,7 +21,6 @@
       "": [
         "colorChange",
         "illuminationChange",
-        "seamlessClone",
         "textureFlattening"
       ]
     }
