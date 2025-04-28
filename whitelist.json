@@ -14,7 +14,7 @@
   },
   "imgproc": {
     "whitelist": {
-      "": ["boxFilter", "cvtColor", "grabCut", "resize"]
+      "": ["boxFilter", "cvtColor", "resize"]
     }
   },
   "photo": {

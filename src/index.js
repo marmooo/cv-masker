@@ -177,17 +177,10 @@ class LoadPanel extends Panel {
 
   handleImageOnloadEvent = (event) => {
     const img = event.currentTarget;
+    if (filterPanel.mask) filterPanel.mask.delete();
+    filterPanel.mask = new cv.Mat.zeros(img.naturalHeight, img.naturalWidth, cv.CV_8UC1);
     filterPanel.setCanvas(img);
-    const filter = filterPanel.filters.grabCut;
-    if (filter.mask) {
-      filter.mask.delete();
-      filter.mask = null;
-      filter.nextMask.delete();
-      filter.nextMask = null;
-      filter.bgdModel.delete();
-      filter.fgdModel.delete();
-      filterPanel.paintPad.clear();
-    }
+    const filter = filterPanel.currentFilter;
     filterPanel.canvas.classList.add("loading");
     setTimeout(() => {
       filter.apply();
@@ -240,6 +233,7 @@ class LoadPanel extends Panel {
 }
 
 class FilterPanel extends LoadPanel {
+  mask;
   filters = {};
 
   constructor(panel) {
@@ -276,18 +270,20 @@ class FilterPanel extends LoadPanel {
     this.paintCanvasContext = this.paintCanvas.getContext("2d", {
       willReadFrequently: true,
     });
-    this.paintPad = new signaturePad(this.paintCanvas);
+    this.paintPad = new signaturePad(this.paintCanvas, {
+      penColor: "#fff",
+    });
     this.updatePenSize(16);
     this.paintPad.addEventListener("endStroke", () => {
       this.canvas.classList.add("loading");
       setTimeout(() => {
-        this.filters.grabCut.apply();
+        this.updateMask();
+        this.currentFilter.apply();
         this.canvas.classList.remove("loading");
       }, 0);
     });
     this.frontWell = panel.querySelector(".front");
     this.eraserWell = panel.querySelector(".eraser");
-    this.backWell = panel.querySelector(".back");
     panel.querySelector(".penSize").oninput = (event) => {
       const penSize = event.target.value;
       this.updatePenSize(penSize);
@@ -301,13 +297,8 @@ class FilterPanel extends LoadPanel {
       this.paintPad.compositeOperation = "destination-out";
       this.resizeWell(this.eraserWell);
     };
-    this.backWell.onclick = () => {
-      this.paintPad.compositeOperation = "source-over";
-      this.paintPad.penColor = "#010000";
-      this.resizeWell(this.backWell);
-    };
     panel.querySelector(".opacity").oninput = (event) => {
-      this.originalCanvas.style.opacity = event.target.value;
+      this.paintCanvas.style.opacity = event.target.value;
     };
 
     this.filterSelect = panel.querySelector(".filterSelect");
@@ -319,7 +310,7 @@ class FilterPanel extends LoadPanel {
   }
 
   resizeWell(target) {
-    [this.frontWell, this.eraserWell, this.backWell].forEach((well) => {
+    [this.frontWell, this.eraserWell].forEach((well) => {
       if (well === target) {
         well.style.width = "96px";
         well.style.height = "96px";
@@ -428,8 +419,6 @@ class FilterPanel extends LoadPanel {
   }
 
   addFilters(panel) {
-    this.filtering = false;
-    this.addGrabCutEvents(panel);
     this.addColorChangeEvents(panel);
     this.addIlluminationChangeEvents(panel);
     this.addTextureFlatteningEvents(panel);
@@ -459,19 +448,9 @@ class FilterPanel extends LoadPanel {
     }
   }
 
-  addGrabCutEvents(panel) {
-    this.filters.grabCut = {
-      root: panel,
-      apply: () => this.grabCut(),
-      mask: undefined,
-      nextMask: undefined,
-      initialMask: undefined,
-      bgdModel: undefined,
-      fgdModel: undefined,
-    };
-  }
-
-  updateMask(mask, initialMask, rows, cols) {
+  updateMask() {
+    const cols = this.mask.cols;
+    const rows = this.mask.rows;
     const resizedCanvas = document.createElement("canvas");
     resizedCanvas.width = cols;
     resizedCanvas.height = rows;
@@ -483,68 +462,15 @@ class FilterPanel extends LoadPanel {
     resizedCanvasContext.drawImage(this.paintCanvas, 0, 0, cols, rows);
     const imageData = resizedCanvasContext.getImageData(0, 0, cols, rows);
     const uint8Array = imageData.data;
-    const maskData = mask.data;
+    const maskData = this.mask.data;
     for (let i = 0; i < maskData.length; i++) {
       const r = uint8Array[i * 4];
-      if (r === 1) {
+      if (r === 255) {
+        maskData[i] = 255;
+      } else {
         maskData[i] = 0;
-      } else if (r === 255) {
-        maskData[i] = 1;
-      } else {
-        maskData[i] = initialMask[i];
       }
     }
-  }
-
-  grabCut() {
-    const filter = this.filters.grabCut;
-    const iterations = 1;
-    const src = cv.imread(this.originalCanvas);
-    cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-    const gap = 1;
-    const rect = new cv.Rect(gap, gap, src.cols - gap, src.rows - gap);
-    if (filter.mask) {
-      this.updateMask(filter.mask, filter.initialMask, src.rows, src.cols);
-      cv.grabCut(
-        src,
-        filter.mask,
-        rect,
-        filter.bgdModel,
-        filter.fgdModel,
-        iterations,
-        cv.GC_EVAL,
-      );
-    } else {
-      filter.mask = new cv.Mat();
-      filter.bgdModel = new cv.Mat();
-      filter.fgdModel = new cv.Mat();
-      cv.grabCut(
-        src,
-        filter.mask,
-        rect,
-        filter.bgdModel,
-        filter.fgdModel,
-        iterations,
-        cv.GC_INIT_WITH_RECT,
-      );
-      filter.initialMask = filter.mask.data.slice();
-    }
-    const mask = filter.mask;
-    filter.nextMask = new cv.Mat(mask.rows, mask.cols, mask.type());
-    cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
-    const srcData = src.data32S;
-    const maskData = mask.data;
-    const nextMaskData = filter.nextMask.data;
-    for (let i = 0; i < srcData.length; i++) {
-      if (maskData[i] % 2 === 0) {
-        srcData[i] = 0;
-        nextMaskData[i] = 0;
-      } else {
-        nextMaskData[i] = 255;
-      }
-    }
-    cv.imshow(this.canvas, src);
-    src.delete();
   }
 
   addColorChangeEvents(panel) {
@@ -570,9 +496,8 @@ class FilterPanel extends LoadPanel {
       this.canvasContext.drawImage(this.originalCanvas, 0, 0);
     } else {
       const src = cv.imread(this.originalCanvas);
-      const mask = this.filters.grabCut.nextMask;
       cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-      cv.colorChange(src, mask, src, R, G, B);
+      cv.colorChange(src, this.mask, src, R, G, B);
       cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
       cv.imshow(this.canvas, src);
       src.delete();
@@ -600,9 +525,8 @@ class FilterPanel extends LoadPanel {
       this.canvasContext.drawImage(this.originalCanvas, 0, 0);
     } else {
       const src = cv.imread(this.originalCanvas);
-      const mask = this.filters.grabCut.nextMask;
       cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-      cv.illuminationChange(src, mask, src, alpha, beta);
+      cv.illuminationChange(src, this.mask, src, alpha, beta);
       cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
       cv.imshow(this.canvas, src);
       src.delete();
@@ -632,11 +556,10 @@ class FilterPanel extends LoadPanel {
       const low = Number(filter.inputs.low.value);
       const high = Number(filter.inputs.high.value) + low;
       const src = cv.imread(this.originalCanvas);
-      const mask = this.filters.grabCut.nextMask;
       cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
       // TODO: buggy
       // TODO: works only kernelSize = 3,5,7
-      cv.textureFlattening(src, mask, src, low, high, kernelSize);
+      cv.textureFlattening(src, this.mask, src, low, high, kernelSize);
       cv.cvtColor(src, src, cv.COLOR_RGB2RGBA, 0);
       cv.imshow(this.canvas, src);
       src.delete();
@@ -664,8 +587,7 @@ class FilterPanel extends LoadPanel {
     const h = this.originalCanvas.height;
     const imageData = this.originalCanvasContext.getImageData(0, 0, w, h);
     const uint32Array = new Uint32Array(imageData.data.buffer);
-    const mask = this.filters.grabCut.nextMask;
-    const maskData = mask.data;
+    const maskData = this.mask.data;
     const r = parseInt(color.slice(1, 3), 16);
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
@@ -711,8 +633,7 @@ class FilterPanel extends LoadPanel {
       );
       cv.resize(effect, effect, new cv.Size(w, h), 0, 0, cv.INTER_NEAREST);
 
-      const mask = this.filters.grabCut.nextMask;
-      const blurredMask = this.getBlurredMask(mask, blurSize);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
@@ -755,8 +676,7 @@ class FilterPanel extends LoadPanel {
       bgra.delete();
 
       const blurSize = Number(filter.inputs.blur.value);
-      const mask = this.filters.grabCut.nextMask;
-      const blurredMask = this.getBlurredMask(mask, blurSize);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
@@ -803,8 +723,7 @@ class FilterPanel extends LoadPanel {
       cv.addWeighted(src, alpha, effect, beta, gamma, effect, -1);
 
       const blurSize = Number(filter.inputs.blur.value);
-      const mask = this.filters.grabCut.nextMask;
-      const blurredMask = this.getBlurredMask(mask, blurSize);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
