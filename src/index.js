@@ -435,6 +435,7 @@ class FilterPanel extends LoadPanel {
     this.addTextureFlatteningEvents(panel);
     this.addFillForegroundEvents(panel);
     this.addMosaicEvents(panel);
+    this.addBrightnessEvents(panel);
     this.addUnsharpMaskEvents(panel);
     this.currentFilter = this.filters.colorChange;
   }
@@ -721,6 +722,49 @@ class FilterPanel extends LoadPanel {
     }
   }
 
+  addBrightnessEvents(panel) {
+    const root = panel.querySelector(".brightness");
+    this.filters.brightness = {
+      root,
+      apply: () => this.brightness(),
+      inputs: {
+        brightness: root.querySelector(".brightness"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.brightness);
+  }
+
+  brightness() {
+    const filter = this.filters.brightness;
+    const brightness = Number(filter.inputs.brightness.value);
+    if (brightness === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const src = cv.imread(this.originalCanvas);
+      const bgra = new cv.MatVector();
+      cv.split(src, bgra);
+      for (let i = 0; i < 3; i++) {
+        const channel = bgra.get(i);
+        channel.convertTo(channel, -1, 1, brightness);
+        bgra.set(i, channel);
+        channel.delete();
+      }
+      const effect = new cv.Mat();
+      cv.merge(bgra, effect);
+      bgra.delete();
+
+      const blurSize = Number(filter.inputs.blur.value);
+      const mask = this.filters.grabCut.nextMask;
+      const blurredMask = this.getBlurredMask(mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
   addUnsharpMaskEvents(panel) {
     const root = panel.querySelector(".unsharpMask");
     this.filters.unsharpMask = {
@@ -742,7 +786,6 @@ class FilterPanel extends LoadPanel {
       this.canvasContext.drawImage(this.originalCanvas, 0, 0);
     } else {
       const strength = Number(filter.inputs.strength.value);
-      const blurSize = Number(filter.inputs.blur.value);
       const src = cv.imread(this.originalCanvas);
       const effect = new cv.Mat();
       cv.boxFilter(
@@ -759,6 +802,7 @@ class FilterPanel extends LoadPanel {
       const gamma = 0;
       cv.addWeighted(src, alpha, effect, beta, gamma, effect, -1);
 
+      const blurSize = Number(filter.inputs.blur.value);
       const mask = this.filters.grabCut.nextMask;
       const blurredMask = this.getBlurredMask(mask, blurSize);
       const result = this.applySeamlessEffect(src, effect, blurredMask);
