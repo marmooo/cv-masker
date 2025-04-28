@@ -177,9 +177,18 @@ class LoadPanel extends Panel {
 
   handleImageOnloadEvent = (event) => {
     const img = event.currentTarget;
-    if (filterPanel.mask) filterPanel.mask.delete();
-    filterPanel.mask = new cv.Mat.zeros(img.naturalHeight, img.naturalWidth, cv.CV_8UC1);
     filterPanel.setCanvas(img);
+    if (filterPanel.mask) filterPanel.mask.delete();
+    filterPanel.mask = new cv.Mat.zeros(
+      img.naturalHeight,
+      img.naturalWidth,
+      cv.CV_8UC1,
+    );
+    filterPanel.drawCircle(
+      filterPanel.paintCanvas,
+      filterPanel.paintCanvasContext,
+    );
+    filterPanel.updateMask();
     const filter = filterPanel.currentFilter;
     filterPanel.canvas.classList.add("loading");
     setTimeout(() => {
@@ -307,6 +316,16 @@ class FilterPanel extends LoadPanel {
     panel.querySelector(".moveTop").onclick = () => this.moveLoadPanel();
     panel.querySelector(".download").onclick = () => this.download();
     this.addFilters(panel);
+  }
+
+  drawCircle(canvas, canvasContext) {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(canvas.width, canvas.height) / 2;
+    canvasContext.fillStyle = "#fff";
+    canvasContext.beginPath();
+    canvasContext.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    canvasContext.fill();
   }
 
   resizeWell(target) {
