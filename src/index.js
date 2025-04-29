@@ -441,6 +441,7 @@ class FilterPanel extends LoadPanel {
     this.addBrightnessEvents(panel);
     this.addContrastEvents(panel);
     this.addHueEvents(panel);
+    this.addSaturationEvents(panel);
     this.addUnsharpMaskEvents(panel);
     this.addMosaicEvents(panel);
     this.addColorChangeEvents(panel);
@@ -618,6 +619,74 @@ class FilterPanel extends LoadPanel {
       cv.merge(channels, hsv);
       h.delete();
       hueMat.delete();
+      channels.delete();
+
+      cv.cvtColor(hsv, bgr, cv.COLOR_HSV2BGR);
+      hsv.delete();
+
+      const bgra = new cv.MatVector();
+      cv.split(src, bgra);
+      const alpha = bgra.get(3);
+      bgra.delete();
+
+      const finalVec = new cv.MatVector();
+      const bgrSplit = new cv.MatVector();
+      cv.split(bgr, bgrSplit);
+      bgr.delete();
+
+      for (let i = 0; i < 3; i++) {
+        finalVec.push_back(bgrSplit.get(i));
+      }
+      finalVec.push_back(alpha);
+      bgrSplit.delete();
+      alpha.delete();
+
+      const effect = new cv.Mat();
+      cv.merge(finalVec, effect);
+      finalVec.delete();
+
+      const blurSize = Number(filter.inputs.blur.value);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  addSaturationEvents(panel) {
+    const root = panel.querySelector(".saturation");
+    this.filters.saturation = {
+      root,
+      apply: () => this.saturation(),
+      inputs: {
+        saturation: root.querySelector(".saturation"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.saturation);
+  }
+
+  saturation() {
+    const filter = this.filters.saturation;
+    const saturation = Number(filter.inputs.saturation.value);
+    if (saturation === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const src = cv.imread(this.originalCanvas);
+      const bgr = new cv.Mat();
+      cv.cvtColor(src, bgr, cv.COLOR_BGRA2BGR);
+      const hsv = new cv.Mat();
+      cv.cvtColor(bgr, hsv, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsv, channels);
+      const s = channels.get(1);
+      s.convertTo(s, -1, saturation, 0);
+      channels.set(1, s);
+      cv.merge(channels, hsv);
+      s.delete();
       channels.delete();
 
       cv.cvtColor(hsv, bgr, cv.COLOR_HSV2BGR);
