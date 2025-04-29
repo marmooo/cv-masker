@@ -440,6 +440,7 @@ class FilterPanel extends LoadPanel {
   addFilters(panel) {
     this.addBrightnessEvents(panel);
     this.addContrastEvents(panel);
+    this.addHueEvents(panel);
     this.addUnsharpMaskEvents(panel);
     this.addMosaicEvents(panel);
     this.addColorChangeEvents(panel);
@@ -566,6 +567,82 @@ class FilterPanel extends LoadPanel {
       const effect = new cv.Mat();
       cv.merge(bgra, effect);
       bgra.delete();
+
+      const blurSize = Number(filter.inputs.blur.value);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  addHueEvents(panel) {
+    const root = panel.querySelector(".hue");
+    this.filters.hue = {
+      root,
+      apply: () => this.hue(),
+      inputs: {
+        hue: root.querySelector(".hue"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.hue);
+  }
+
+  hue() {
+    const filter = this.filters.hue;
+    const hue = Number(filter.inputs.hue.value);
+    if (hue === -1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const src = cv.imread(this.originalCanvas);
+      const bgr = new cv.Mat();
+      cv.cvtColor(src, bgr, cv.COLOR_BGRA2BGR);
+      const hsv = new cv.Mat();
+      cv.cvtColor(bgr, hsv, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsv, channels);
+      const h = channels.get(0);
+      const hueMat = new cv.Mat(h.rows, h.cols, h.type(), new cv.Scalar(hue));
+      cv.add(h, hueMat, h);
+      const lut = new cv.Mat(1, 256, cv.CV_8U);
+      const lutData = lut.data;
+      for (let i = 0; i < 256; i++) {
+        lutData[i] = Math.min(179, Math.max(0, i));
+      }
+      cv.LUT(h, lut, h);
+      channels.set(0, h);
+      cv.merge(channels, hsv);
+      h.delete();
+      hueMat.delete();
+      channels.delete();
+
+      cv.cvtColor(hsv, bgr, cv.COLOR_HSV2BGR);
+      hsv.delete();
+
+      const bgra = new cv.MatVector();
+      cv.split(src, bgra);
+      const alpha = bgra.get(3);
+      bgra.delete();
+
+      const finalVec = new cv.MatVector();
+      const bgrSplit = new cv.MatVector();
+      cv.split(bgr, bgrSplit);
+      bgr.delete();
+
+      for (let i = 0; i < 3; i++) {
+        finalVec.push_back(bgrSplit.get(i));
+      }
+      finalVec.push_back(alpha);
+      bgrSplit.delete();
+      alpha.delete();
+
+      const effect = new cv.Mat();
+      cv.merge(finalVec, effect);
+      finalVec.delete();
 
       const blurSize = Number(filter.inputs.blur.value);
       const blurredMask = this.getBlurredMask(this.mask, blurSize);

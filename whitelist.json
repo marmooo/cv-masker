@@ -4,6 +4,7 @@
       "": [
         "add",
         "addWeighted",
+        "LUT",
         "merge",
         "multiply",
         "subtract",
