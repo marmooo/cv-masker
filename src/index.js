@@ -521,7 +521,6 @@ class FilterPanel extends LoadPanel {
         const channel = bgra.get(i);
         channel.convertTo(channel, -1, 1, brightness);
         bgra.set(i, channel);
-        channel.delete();
       }
       const effect = new cv.Mat();
       cv.merge(bgra, effect);
@@ -532,6 +531,7 @@ class FilterPanel extends LoadPanel {
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
+      effect.delete();
       result.delete();
       blurredMask.delete();
     }
@@ -563,7 +563,6 @@ class FilterPanel extends LoadPanel {
         const channel = bgra.get(i);
         channel.convertTo(channel, -1, contrast, 0);
         bgra.set(i, channel);
-        channel.delete();
       }
       const effect = new cv.Mat();
       cv.merge(bgra, effect);
@@ -574,6 +573,7 @@ class FilterPanel extends LoadPanel {
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
+      effect.delete();
       result.delete();
       blurredMask.delete();
     }
@@ -650,6 +650,7 @@ class FilterPanel extends LoadPanel {
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
+      effect.delete();
       result.delete();
       blurredMask.delete();
     }
@@ -718,6 +719,7 @@ class FilterPanel extends LoadPanel {
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
+      effect.delete();
       result.delete();
       blurredMask.delete();
     }
@@ -765,6 +767,7 @@ class FilterPanel extends LoadPanel {
       const result = this.applySeamlessEffect(src, effect, blurredMask);
       cv.imshow(this.canvas, result);
       src.delete();
+      effect.delete();
       result.delete();
       blurredMask.delete();
     }
