@@ -7,8 +7,8 @@
         "LUT",
         "merge",
         "multiply",
-        "subtract",
-        "split"
+        "split",
+        "subtract"
       ],
       "Algorithm": []
     }
