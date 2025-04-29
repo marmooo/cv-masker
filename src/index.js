@@ -438,13 +438,14 @@ class FilterPanel extends LoadPanel {
   }
 
   addFilters(panel) {
+    this.addBrightnessEvents(panel);
+    this.addContrastEvents(panel);
+    this.addUnsharpMaskEvents(panel);
+    this.addMosaicEvents(panel);
     this.addColorChangeEvents(panel);
     this.addIlluminationChangeEvents(panel);
     this.addTextureFlatteningEvents(panel);
     this.addFillForegroundEvents(panel);
-    this.addMosaicEvents(panel);
-    this.addBrightnessEvents(panel);
-    this.addUnsharpMaskEvents(panel);
     this.currentFilter = this.filters.brightness;
   }
 
@@ -517,6 +518,48 @@ class FilterPanel extends LoadPanel {
       for (let i = 0; i < 3; i++) {
         const channel = bgra.get(i);
         channel.convertTo(channel, -1, 1, brightness);
+        bgra.set(i, channel);
+        channel.delete();
+      }
+      const effect = new cv.Mat();
+      cv.merge(bgra, effect);
+      bgra.delete();
+
+      const blurSize = Number(filter.inputs.blur.value);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  addContrastEvents(panel) {
+    const root = panel.querySelector(".contrast");
+    this.filters.contrast = {
+      root,
+      apply: () => this.contrast(),
+      inputs: {
+        contrast: root.querySelector(".contrast"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.contrast);
+  }
+
+  contrast() {
+    const filter = this.filters.contrast;
+    const contrast = Number(filter.inputs.contrast.value);
+    if (contrast === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const src = cv.imread(this.originalCanvas);
+      const bgra = new cv.MatVector();
+      cv.split(src, bgra);
+      for (let i = 0; i < 3; i++) {
+        const channel = bgra.get(i);
+        channel.convertTo(channel, -1, contrast, 0);
         bgra.set(i, channel);
         channel.delete();
       }
