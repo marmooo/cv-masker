@@ -445,7 +445,7 @@ class FilterPanel extends LoadPanel {
     this.addMosaicEvents(panel);
     this.addBrightnessEvents(panel);
     this.addUnsharpMaskEvents(panel);
-    this.currentFilter = this.filters.colorChange;
+    this.currentFilter = this.filters.brightness;
   }
 
   addInputEvents(filter) {
@@ -489,6 +489,139 @@ class FilterPanel extends LoadPanel {
       } else {
         maskData[i] = 0;
       }
+    }
+  }
+
+  addBrightnessEvents(panel) {
+    const root = panel.querySelector(".brightness");
+    this.filters.brightness = {
+      root,
+      apply: () => this.brightness(),
+      inputs: {
+        brightness: root.querySelector(".brightness"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.brightness);
+  }
+
+  brightness() {
+    const filter = this.filters.brightness;
+    const brightness = Number(filter.inputs.brightness.value);
+    if (brightness === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const src = cv.imread(this.originalCanvas);
+      const bgra = new cv.MatVector();
+      cv.split(src, bgra);
+      for (let i = 0; i < 3; i++) {
+        const channel = bgra.get(i);
+        channel.convertTo(channel, -1, 1, brightness);
+        bgra.set(i, channel);
+        channel.delete();
+      }
+      const effect = new cv.Mat();
+      cv.merge(bgra, effect);
+      bgra.delete();
+
+      const blurSize = Number(filter.inputs.blur.value);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  addUnsharpMaskEvents(panel) {
+    const root = panel.querySelector(".unsharpMask");
+    this.filters.unsharpMask = {
+      root,
+      apply: () => this.unsharpMask(),
+      inputs: {
+        ksize: root.querySelector(".ksize"),
+        strength: root.querySelector(".strength"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.unsharpMask);
+  }
+
+  unsharpMask() {
+    const filter = this.filters.unsharpMask;
+    const ksize = Number(filter.inputs.ksize.value);
+    if (ksize === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const strength = Number(filter.inputs.strength.value);
+      const src = cv.imread(this.originalCanvas);
+      const effect = new cv.Mat();
+      cv.boxFilter(
+        src,
+        effect,
+        -1,
+        new cv.Size(ksize, ksize),
+        new cv.Point(-1, -1),
+        true,
+        cv.BORDER_DEFAULT,
+      );
+      const alpha = 1 + strength;
+      const beta = -strength;
+      const gamma = 0;
+      cv.addWeighted(src, alpha, effect, beta, gamma, effect, -1);
+
+      const blurSize = Number(filter.inputs.blur.value);
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      result.delete();
+      blurredMask.delete();
+    }
+  }
+
+  addMosaicEvents(panel) {
+    const root = panel.querySelector(".mosaic");
+    this.filters.mosaic = {
+      root,
+      apply: () => this.mosaic(),
+      inputs: {
+        dsize: root.querySelector(".dsize"),
+        blur: root.querySelector(".blur"),
+      },
+    };
+    this.addInputEvents(this.filters.mosaic);
+  }
+
+  mosaic() {
+    const filter = this.filters.mosaic;
+    const dsize = Number(filter.inputs.dsize.value);
+    if (dsize === 1) {
+      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
+    } else {
+      const blurSize = Number(filter.inputs.blur.value);
+      const src = cv.imread(this.originalCanvas);
+      const effect = new cv.Mat();
+      const w = src.cols;
+      const h = src.rows;
+      cv.resize(
+        src,
+        effect,
+        new cv.Size(w / dsize, h / dsize),
+        0,
+        0,
+        cv.INTER_AREA,
+      );
+      cv.resize(effect, effect, new cv.Size(w, h), 0, 0, cv.INTER_NEAREST);
+
+      const blurredMask = this.getBlurredMask(this.mask, blurSize);
+      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      cv.imshow(this.canvas, result);
+      src.delete();
+      effect.delete();
+      result.delete();
+      blurredMask.delete();
     }
   }
 
@@ -616,139 +749,6 @@ class FilterPanel extends LoadPanel {
       if (maskData[i] !== 0) uint32Array[i] = rgba;
     }
     this.canvasContext.putImageData(imageData, 0, 0);
-  }
-
-  addMosaicEvents(panel) {
-    const root = panel.querySelector(".mosaic");
-    this.filters.mosaic = {
-      root,
-      apply: () => this.mosaic(),
-      inputs: {
-        dsize: root.querySelector(".dsize"),
-        blur: root.querySelector(".blur"),
-      },
-    };
-    this.addInputEvents(this.filters.mosaic);
-  }
-
-  mosaic() {
-    const filter = this.filters.mosaic;
-    const dsize = Number(filter.inputs.dsize.value);
-    if (dsize === 1) {
-      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
-    } else {
-      const blurSize = Number(filter.inputs.blur.value);
-      const src = cv.imread(this.originalCanvas);
-      const effect = new cv.Mat();
-      const w = src.cols;
-      const h = src.rows;
-      cv.resize(
-        src,
-        effect,
-        new cv.Size(w / dsize, h / dsize),
-        0,
-        0,
-        cv.INTER_AREA,
-      );
-      cv.resize(effect, effect, new cv.Size(w, h), 0, 0, cv.INTER_NEAREST);
-
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
-      cv.imshow(this.canvas, result);
-      src.delete();
-      effect.delete();
-      result.delete();
-      blurredMask.delete();
-    }
-  }
-
-  addBrightnessEvents(panel) {
-    const root = panel.querySelector(".brightness");
-    this.filters.brightness = {
-      root,
-      apply: () => this.brightness(),
-      inputs: {
-        brightness: root.querySelector(".brightness"),
-        blur: root.querySelector(".blur"),
-      },
-    };
-    this.addInputEvents(this.filters.brightness);
-  }
-
-  brightness() {
-    const filter = this.filters.brightness;
-    const brightness = Number(filter.inputs.brightness.value);
-    if (brightness === 1) {
-      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
-    } else {
-      const src = cv.imread(this.originalCanvas);
-      const bgra = new cv.MatVector();
-      cv.split(src, bgra);
-      for (let i = 0; i < 3; i++) {
-        const channel = bgra.get(i);
-        channel.convertTo(channel, -1, 1, brightness);
-        bgra.set(i, channel);
-        channel.delete();
-      }
-      const effect = new cv.Mat();
-      cv.merge(bgra, effect);
-      bgra.delete();
-
-      const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
-      cv.imshow(this.canvas, result);
-      src.delete();
-      result.delete();
-      blurredMask.delete();
-    }
-  }
-
-  addUnsharpMaskEvents(panel) {
-    const root = panel.querySelector(".unsharpMask");
-    this.filters.unsharpMask = {
-      root,
-      apply: () => this.unsharpMask(),
-      inputs: {
-        ksize: root.querySelector(".ksize"),
-        strength: root.querySelector(".strength"),
-        blur: root.querySelector(".blur"),
-      },
-    };
-    this.addInputEvents(this.filters.unsharpMask);
-  }
-
-  unsharpMask() {
-    const filter = this.filters.unsharpMask;
-    const ksize = Number(filter.inputs.ksize.value);
-    if (ksize === 1) {
-      this.canvasContext.drawImage(this.originalCanvas, 0, 0);
-    } else {
-      const strength = Number(filter.inputs.strength.value);
-      const src = cv.imread(this.originalCanvas);
-      const effect = new cv.Mat();
-      cv.boxFilter(
-        src,
-        effect,
-        -1,
-        new cv.Size(ksize, ksize),
-        new cv.Point(-1, -1),
-        true,
-        cv.BORDER_DEFAULT,
-      );
-      const alpha = 1 + strength;
-      const beta = -strength;
-      const gamma = 0;
-      cv.addWeighted(src, alpha, effect, beta, gamma, effect, -1);
-
-      const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
-      cv.imshow(this.canvas, result);
-      src.delete();
-      result.delete();
-      blurredMask.delete();
-    }
   }
 
   getBlurredMask(mask, blurSize) {
