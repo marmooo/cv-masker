@@ -48,7 +48,7 @@
         background-image: var(--transparent-bg-dark, none);
       }
       .loading { transition: filter 2s; filter: brightness(200%); }
-      .originalImage { top: 0; left: 0; opacity:.1; }
+      .originalImage { top: 0; left: 0; }
       .paintCanvas { top: 0; left: 0; }
       .paintPanel { display:flex; justify-content:center; align-items:center; height:96px; }
       .palette { display:flex; justify-content:center; align-items:center; }
@@ -144,7 +144,7 @@
         <div class="canvasContainer d-flex align-items-center justify-content-center bg-dark-subtle">
           <div class="position-relative w-100 h-100">
             <canvas class="image transparent-bg w-100 h-100 object-fit-contain"></canvas>
-            <canvas class="originalImage w-100 h-100 object-fit-contain position-absolute"></canvas>
+            <canvas class="originalImage w-100 h-100 object-fit-contain position-absolute d-none"></canvas>
             <canvas class="paintCanvas position-absolute"></canvas>
             <div class="filterNav bg-dark-subtle opacity-75 p-2">
               <div class="paintPanel">
