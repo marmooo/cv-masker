@@ -517,10 +517,15 @@ class FilterPanel extends LoadPanel {
       const src = cv.imread(this.originalCanvas);
       const bgra = new cv.MatVector();
       cv.split(src, bgra);
+      const channels = [];
       for (let i = 0; i < 3; i++) {
         const channel = bgra.get(i);
+        channels.push(channel);
         channel.convertTo(channel, -1, 1, brightness);
         bgra.set(i, channel);
+      }
+      for (let i = 0; i < 3; i++) {
+        channels[i].delete();
       }
       const effect = new cv.Mat();
       cv.merge(bgra, effect);
@@ -559,10 +564,15 @@ class FilterPanel extends LoadPanel {
       const src = cv.imread(this.originalCanvas);
       const bgra = new cv.MatVector();
       cv.split(src, bgra);
+      const channels = [];
       for (let i = 0; i < 3; i++) {
         const channel = bgra.get(i);
+        channels.push(channel);
         channel.convertTo(channel, -1, contrast, 0);
         bgra.set(i, channel);
+      }
+      for (let i = 0; i < 3; i++) {
+        channels[i].delete();
       }
       const effect = new cv.Mat();
       cv.merge(bgra, effect);
@@ -969,6 +979,7 @@ class FilterPanel extends LoadPanel {
       maskVec.push_back(maskFloat);
       cv.merge(maskVec, maskColor);
       maskFloat.delete();
+      maskVec.delete();
     }
 
     const srcRGB = new cv.Mat();
@@ -978,11 +989,18 @@ class FilterPanel extends LoadPanel {
       src.convertTo(srcFloat, cv.CV_32FC4, 1.0 / 255.0);
       cv.split(srcFloat, srcChannels);
       const srcRGBVec = new cv.MatVector();
-      srcRGBVec.push_back(srcChannels.get(0));
-      srcRGBVec.push_back(srcChannels.get(1));
-      srcRGBVec.push_back(srcChannels.get(2));
+      const ch0 = srcChannels.get(0);
+      const ch1 = srcChannels.get(1);
+      const ch2 = srcChannels.get(2);
+      srcRGBVec.push_back(ch0);
+      srcRGBVec.push_back(ch1);
+      srcRGBVec.push_back(ch2);
       cv.merge(srcRGBVec, srcRGB);
+      ch0.delete();
+      ch1.delete();
+      ch2.delete();
       srcFloat.delete();
+      srcRGBVec.delete();
     }
 
     const dstRGB = new cv.Mat();
@@ -992,10 +1010,16 @@ class FilterPanel extends LoadPanel {
       const dstChannels = new cv.MatVector();
       cv.split(dstFloat, dstChannels);
       const dstRGBVec = new cv.MatVector();
-      dstRGBVec.push_back(dstChannels.get(0));
-      dstRGBVec.push_back(dstChannels.get(1));
-      dstRGBVec.push_back(dstChannels.get(2));
+      const ch0 = dstChannels.get(0);
+      const ch1 = dstChannels.get(1);
+      const ch2 = dstChannels.get(2);
+      dstRGBVec.push_back(ch0);
+      dstRGBVec.push_back(ch1);
+      dstRGBVec.push_back(ch2);
       cv.merge(dstRGBVec, dstRGB);
+      ch0.delete();
+      ch1.delete();
+      ch2.delete();
       dstFloat.delete();
       dstChannels.delete();
     }
@@ -1027,10 +1051,13 @@ class FilterPanel extends LoadPanel {
     const result = new cv.Mat();
     {
       const resultVec = new cv.MatVector();
+      const alpha = srcChannels.get(3);
       resultVec.push_back(resultRGB);
-      resultVec.push_back(srcChannels.get(3)); // alpha
+      resultVec.push_back(alpha);
       cv.merge(resultVec, result);
       result.convertTo(result, cv.CV_8UC4, 255.0);
+      resultVec.delete();
+      alpha.delete();
       resultRGB.delete();
       srcChannels.delete();
     }
