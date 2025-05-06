@@ -532,13 +532,18 @@ class FilterPanel extends LoadPanel {
       bgra.delete();
 
       const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      let result;
+      if (blurSize === 0) {
+        result = this.applySeamlessEffect(src, effect, this.mask);
+      } else {
+        const blurredMask = this.getBlurredMask(this.mask, blurSize);
+        result = this.applySeamlessEffect(src, effect, blurredMask);
+        blurredMask.delete();
+      }
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
       result.delete();
-      blurredMask.delete();
     }
   }
 
