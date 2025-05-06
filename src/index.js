@@ -584,13 +584,18 @@ class FilterPanel extends LoadPanel {
       bgra.delete();
 
       const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      let result;
+      if (blurSize === 0) {
+        result = this.applySeamlessEffect(src, effect, this.mask);
+      } else {
+        const blurredMask = this.getBlurredMask(this.mask, blurSize);
+        result = this.applySeamlessEffect(src, effect, blurredMask);
+        blurredMask.delete();
+      }
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
       result.delete();
-      blurredMask.delete();
     }
   }
 
@@ -661,13 +666,18 @@ class FilterPanel extends LoadPanel {
       finalVec.delete();
 
       const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      let result;
+      if (blurSize === 0) {
+        result = this.applySeamlessEffect(src, effect, this.mask);
+      } else {
+        const blurredMask = this.getBlurredMask(this.mask, blurSize);
+        result = this.applySeamlessEffect(src, effect, blurredMask);
+        blurredMask.delete();
+      }
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
       result.delete();
-      blurredMask.delete();
     }
   }
 
@@ -730,13 +740,18 @@ class FilterPanel extends LoadPanel {
       finalVec.delete();
 
       const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      let result;
+      if (blurSize === 0) {
+        result = this.applySeamlessEffect(src, effect, this.mask);
+      } else {
+        const blurredMask = this.getBlurredMask(this.mask, blurSize);
+        result = this.applySeamlessEffect(src, effect, blurredMask);
+        blurredMask.delete();
+      }
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
       result.delete();
-      blurredMask.delete();
     }
   }
 
@@ -778,13 +793,18 @@ class FilterPanel extends LoadPanel {
       cv.addWeighted(src, alpha, effect, beta, gamma, effect, -1);
 
       const blurSize = Number(filter.inputs.blur.value);
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      let result;
+      if (blurSize === 0) {
+        result = this.applySeamlessEffect(src, effect, this.mask);
+      } else {
+        const blurredMask = this.getBlurredMask(this.mask, blurSize);
+        result = this.applySeamlessEffect(src, effect, blurredMask);
+        blurredMask.delete();
+      }
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
       result.delete();
-      blurredMask.delete();
     }
   }
 
@@ -807,7 +827,6 @@ class FilterPanel extends LoadPanel {
     if (dsize === 1) {
       this.canvasContext.drawImage(this.originalCanvas, 0, 0);
     } else {
-      const blurSize = Number(filter.inputs.blur.value);
       const src = cv.imread(this.originalCanvas);
       const effect = new cv.Mat();
       const w = src.cols;
@@ -822,13 +841,19 @@ class FilterPanel extends LoadPanel {
       );
       cv.resize(effect, effect, new cv.Size(w, h), 0, 0, cv.INTER_NEAREST);
 
-      const blurredMask = this.getBlurredMask(this.mask, blurSize);
-      const result = this.applySeamlessEffect(src, effect, blurredMask);
+      const blurSize = Number(filter.inputs.blur.value);
+      let result;
+      if (blurSize === 0) {
+        result = this.applySeamlessEffect(src, effect, this.mask);
+      } else {
+        const blurredMask = this.getBlurredMask(this.mask, blurSize);
+        result = this.applySeamlessEffect(src, effect, blurredMask);
+        blurredMask.delete();
+      }
       cv.imshow(this.canvas, result);
       src.delete();
       effect.delete();
       result.delete();
-      blurredMask.delete();
     }
   }
 
