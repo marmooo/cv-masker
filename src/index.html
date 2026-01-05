@@ -21,11 +21,7 @@
       gtag('config', 'G-F2179JXDYY');
     </script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/cv-masker/sw.js');
-        });
-      }
+      navigator.serviceWorker.register("/cv-masker/sw.js");
     </script>
     <link rel="icon" type="image/png" href="/cv-masker/favicon/favicon.png">
     <link rel="icon" type="image/svg+xml" href="/cv-masker/favicon/favicon.svg">
