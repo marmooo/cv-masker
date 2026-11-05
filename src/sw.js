@@ -1,4 +1,4 @@
-const cacheName = "2026-10-31 00:00";
+const cacheName = "2026-11-051 00:00";
 const urlsToCache = [
   "/cv-masker/index.js",
   "/cv-masker/img/before.webp",
